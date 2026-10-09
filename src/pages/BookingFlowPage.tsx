@@ -40,10 +40,10 @@ export const BookingFlowPage: React.FC = () => {
   const totalDays = calculateDays();
   const vehiclePriceTotal = selectedVehicle.dailyPrice * totalDays;
 
-  const handleSubmitBooking = (e: React.FormEvent) => {
+  const handleSubmitBooking = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const newBooking = createBooking({
+    const created = await createBooking({
       userId: user?.id || 'usr-guest',
       userName: customerName,
       userPhone: customerPhone,
@@ -61,7 +61,7 @@ export const BookingFlowPage: React.FC = () => {
       bookingStatus: 'REQUESTED'
     });
 
-    setConfirmedBooking(newBooking);
+    setConfirmedBooking(created);
     setStep(5);
   };
 

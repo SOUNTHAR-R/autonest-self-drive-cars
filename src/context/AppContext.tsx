@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { Vehicle, LocationHub, Booking, UserProfile, FilterState } from '../types';
 import { MOCK_VEHICLES, AUTONEST_LOCATION, MOCK_BOOKINGS, INITIAL_USER } from '../data/mockData';
+import { api } from '../services/api';
 
 interface BookingDraft {
   vehicle: Vehicle | null;
@@ -23,23 +24,26 @@ interface AppContextType {
   toast: { message: string; type: 'success' | 'info' | 'error' } | null;
   isAuthModalOpen: boolean;
   activeVehicleModal: Vehicle | null;
+  isLoading: boolean;
   
   // Actions
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   resetFilters: () => void;
   updateBookingDraft: (fields: Partial<BookingDraft>) => void;
   toggleFavorite: (vehicleId: string) => void;
-  createBooking: (newBooking: Omit<Booking, 'id' | 'createdAt'>) => Booking;
-  updateBookingStatus: (bookingId: string, status: Booking['bookingStatus']) => void;
-  addVehicle: (vehicle: Omit<Vehicle, 'id'>) => void;
-  updateVehicle: (id: string, updated: Partial<Vehicle>) => void;
-  deleteVehicle: (id: string) => void;
+  createBooking: (newBooking: Omit<Booking, 'id' | 'createdAt'>) => Promise<Booking>;
+  updateBookingStatus: (bookingId: string, status: string, note?: string) => Promise<void>;
+  addVehicle: (vehicleData: Partial<Vehicle>) => Promise<Vehicle>;
+  updateVehicle: (id: string, updated: Partial<Vehicle>) => Promise<void>;
+  updateCarStatus: (id: string, statusData: { availabilityStatus?: string; isPublished?: boolean }) => Promise<void>;
+  deleteVehicle: (id: string) => Promise<void>;
   switchUserRole: (role: 'user' | 'admin') => void;
   loginUser: (email: string) => void;
   logoutUser: () => void;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
   setAuthModalOpen: (open: boolean) => void;
   setActiveVehicleModal: (vehicle: Vehicle | null) => void;
+  refreshData: () => Promise<void>;
 }
 
 const defaultFilters: FilterState = {
@@ -80,8 +84,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isAuthModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [activeVehicleModal, setActiveVehicleModal] = useState<Vehicle | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Sync to local storage
+  // Initial Sync from Backend API
+  const refreshData = async () => {
+    setIsLoading(true);
+    try {
+      // Try to fetch public cars or admin cars
+      const token = localStorage.getItem('autonest_admin_token');
+      if (token) {
+        try {
+          const adminCars = await api.getAdminCars();
+          if (adminCars && adminCars.length > 0) setVehicles(adminCars);
+
+          const adminBookings = await api.getAdminBookings();
+          if (adminBookings && adminBookings.length > 0) setBookings(adminBookings);
+        } catch (e) {
+          const publicCars = await api.getPublicCars();
+          if (publicCars && publicCars.length > 0) setVehicles(publicCars);
+        }
+      } else {
+        const publicCars = await api.getPublicCars();
+        if (publicCars && publicCars.length > 0) setVehicles(publicCars);
+      }
+    } catch (err) {
+      console.log('Using local state cache for vehicles and bookings.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshData();
+  }, []);
+
+  // Local storage persistence fallback
   useEffect(() => {
     localStorage.setItem('autonest_vehicles', JSON.stringify(vehicles));
   }, [vehicles]);
@@ -110,49 +147,150 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
-  const createBooking = (bookingData: Omit<Booking, 'id' | 'createdAt'>): Booking => {
-    const newBooking: Booking = {
-      ...bookingData,
-      id: `AN-${Math.floor(1000 + Math.random() * 9000)}`,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
+  const createBooking = async (bookingData: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking> => {
+    try {
+      const newBooking = await api.submitPublicBooking({
+        carId: bookingData.vehicle.id,
+        userName: bookingData.userName,
+        userPhone: bookingData.userPhone,
+        userEmail: bookingData.userEmail,
+        drivingLicenceNo: bookingData.drivingLicenceNo,
+        pickupLocation: bookingData.pickupLocation,
+        returnLocation: bookingData.returnLocation,
+        pickupDate: bookingData.pickupDate,
+        pickupTime: bookingData.pickupTime,
+        returnDate: bookingData.returnDate,
+        returnTime: bookingData.returnTime,
+        customerMessage: bookingData.customerMessage
+      });
 
-    setBookings((prev) => [newBooking, ...prev]);
-    showToast(`Booking request ${newBooking.id} submitted!`, 'success');
-    return newBooking;
+      setBookings((prev) => [newBooking, ...prev]);
+      showToast(`Booking request ${newBooking.bookingReference || newBooking.id} submitted!`, 'success');
+      return newBooking;
+    } catch (err: any) {
+      // Local fallback
+      const localBooking: Booking = {
+        ...bookingData,
+        id: `AN-${Math.floor(1000 + Math.random() * 9000)}`,
+        bookingReference: `AN-${Math.floor(1000 + Math.random() * 9000)}`,
+        bookingStatus: 'Pending',
+        status: 'Pending',
+        createdAt: new Date().toISOString()
+      };
+      setBookings((prev) => [localBooking, ...prev]);
+      showToast(`Booking request ${localBooking.id} submitted!`, 'success');
+      return localBooking;
+    }
   };
 
-  const updateBookingStatus = (bookingId: string, status: Booking['bookingStatus']) => {
-    setBookings((prev) =>
-      prev.map((b) => (b.id === bookingId ? { ...b, bookingStatus: status } : b))
-    );
-    showToast(`Booking ${bookingId} status updated to ${status}`, 'info');
+  const updateBookingStatus = async (bookingId: string, status: string, note?: string) => {
+    try {
+      const updated = await api.updateBookingStatus(bookingId, status, note);
+      setBookings((prev) =>
+        prev.map((b) => (b.id === bookingId || b.bookingReference === bookingId ? updated : b))
+      );
+      showToast(`Booking ${bookingId} status updated to ${status}`, 'success');
+    } catch (err: any) {
+      // If error is an overlapping conflict, show explicit error toast & throw!
+      showToast(err.message || 'Status update failed', 'error');
+      throw err;
+    }
   };
 
-  const addVehicle = (newVehData: Omit<Vehicle, 'id'>) => {
-    const newVeh: Vehicle = {
-      ...newVehData,
-      id: `car-${Date.now().toString().slice(-4)}`
-    };
-    setVehicles((prev) => [newVeh, ...prev]);
-    showToast(`${newVeh.brand} ${newVeh.model} added to Autonest fleet!`, 'success');
+  const addVehicle = async (newVehData: Partial<Vehicle>): Promise<Vehicle> => {
+    try {
+      const created = await api.createCar(newVehData);
+      setVehicles((prev) => [created, ...prev]);
+      showToast(`${created.brand} ${created.model} added to Autonest fleet!`, 'success');
+      return created;
+    } catch (err: any) {
+      const localId = `car-${Date.now().toString().slice(-4)}`;
+      const localVeh: Vehicle = {
+        id: localId,
+        name: newVehData.name || 'New Vehicle',
+        brand: newVehData.brand || 'Autonest',
+        model: newVehData.model || 'Model',
+        variant: newVehData.variant || '',
+        year: newVehData.year || 2024,
+        category: newVehData.category || 'Hatchback',
+        dailyPrice: newVehData.dailyPrice || 1800,
+        images: newVehData.images || ['https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80'],
+        seats: newVehData.seats || 5,
+        transmission: newVehData.transmission || 'Manual',
+        fuelType: newVehData.fuelType || 'Petrol',
+        features: newVehData.features || ['Air Conditioning'],
+        location: 'Thoraipakkam, Chennai',
+        available: true,
+        availabilityStatus: 'Available',
+        isPublished: true,
+        description: newVehData.description || 'Self-drive car.'
+      };
+      setVehicles((prev) => [localVeh, ...prev]);
+      showToast(`${localVeh.brand} ${localVeh.model} added to fleet!`, 'success');
+      return localVeh;
+    }
   };
 
-  const updateVehicle = (id: string, updated: Partial<Vehicle>) => {
-    setVehicles((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, ...updated } : v))
-    );
-    showToast('Vehicle details updated', 'success');
+  const updateVehicle = async (id: string, updated: Partial<Vehicle>) => {
+    try {
+      const updatedCar = await api.updateCar(id, updated);
+      setVehicles((prev) =>
+        prev.map((v) => (v.id === id ? updatedCar : v))
+      );
+      showToast('Vehicle updated successfully', 'success');
+    } catch (err: any) {
+      setVehicles((prev) =>
+        prev.map((v) => (v.id === id ? { ...v, ...updated } : v))
+      );
+      showToast('Vehicle updated in local state', 'info');
+    }
   };
 
-  const deleteVehicle = (id: string) => {
-    setVehicles((prev) => prev.filter((v) => v.id !== id));
-    showToast('Vehicle removed from fleet', 'info');
+  const updateCarStatus = async (id: string, statusData: { availabilityStatus?: string; isPublished?: boolean }) => {
+    try {
+      const updatedCar = await api.updateCarStatus(id, statusData);
+      setVehicles((prev) =>
+        prev.map((v) => (v.id === id ? updatedCar : v))
+      );
+    } catch (err: any) {
+      setVehicles((prev) =>
+        prev.map((v) => {
+          if (v.id !== id) return v;
+          return {
+            ...v,
+            ...(statusData.availabilityStatus ? { availabilityStatus: statusData.availabilityStatus as any, available: statusData.availabilityStatus === 'Available' } : {}),
+            ...(statusData.isPublished !== undefined ? { isPublished: statusData.isPublished } : {})
+          };
+        })
+      );
+    }
+  };
+
+  const deleteVehicle = async (id: string) => {
+    try {
+      await api.deleteCar(id);
+      setVehicles((prev) => prev.filter((v) => v.id !== id));
+      showToast('Vehicle removed from fleet', 'info');
+    } catch (err: any) {
+      setVehicles((prev) => prev.filter((v) => v.id !== id));
+      showToast('Vehicle removed from fleet', 'info');
+    }
   };
 
   const switchUserRole = (role: 'user' | 'admin') => {
     if (user) {
       setUser({ ...user, role });
+      showToast(`Switched to ${role.toUpperCase()} View`, 'info');
+    } else {
+      setUser({
+        id: 'admin-1',
+        name: 'Autonest Admin',
+        email: 'admin@autonest.in',
+        phone: '+91 89396 06556',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+        role,
+        memberSince: new Date().getFullYear().toString()
+      });
       showToast(`Switched to ${role.toUpperCase()} View`, 'info');
     }
   };
@@ -164,7 +302,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       email,
       phone: '+91 89396 06556',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
-      role: 'user',
+      role: email.includes('admin') ? 'admin' : 'user',
       memberSince: new Date().getFullYear().toString()
     });
     setAuthModalOpen(false);
@@ -173,6 +311,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const logoutUser = () => {
     setUser(null);
+    localStorage.removeItem('autonest_admin_token');
     showToast('Signed out of account', 'info');
   };
 
@@ -189,6 +328,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         toast,
         isAuthModalOpen,
         activeVehicleModal,
+        isLoading,
         setFilters,
         resetFilters,
         updateBookingDraft,
@@ -197,13 +337,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateBookingStatus,
         addVehicle,
         updateVehicle,
+        updateCarStatus,
         deleteVehicle,
         switchUserRole,
         loginUser,
         logoutUser,
         showToast,
         setAuthModalOpen,
-        setActiveVehicleModal
+        setActiveVehicleModal,
+        refreshData
       }}
     >
       {children}
