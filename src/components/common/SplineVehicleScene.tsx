@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Spline from '@splinetool/react-spline';
 import { Sparkles, Move, Loader2 } from 'lucide-react';
 
@@ -14,13 +14,37 @@ export const SplineVehicleScene: React.FC<SplineVehicleSceneProps> = ({
   showControls = true
 }) => {
   const [isLoading, setIsLoading] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleLoad = () => {
     setIsLoading(false);
+    try {
+      const container = containerRef.current;
+      const canvas = container ? container.querySelector('canvas') : null;
+
+      if (canvas) {
+        canvas.style.touchAction = 'none';
+        canvas.style.pointerEvents = 'auto';
+
+        const handleTouchMove = (e: TouchEvent) => {
+          if (e.touches.length === 1) {
+            e.preventDefault();
+          }
+        };
+
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+      }
+    } catch (err) {
+      console.warn('Spline touch listener setup:', err);
+    }
   };
 
   return (
-    <div className={`relative w-full rounded-3xl overflow-hidden bg-gradient-to-b from-[#12141d] to-[#090a0f] border border-white/10 shadow-2xl ${height} ${className}`}>
+    <div
+      ref={containerRef}
+      className={`relative w-full rounded-3xl overflow-hidden bg-gradient-to-b from-[#12141d] to-[#090a0f] border border-white/10 shadow-2xl ${height} ${className}`}
+      style={{ touchAction: 'none' }}
+    >
       
       {/* Loading Skeleton */}
       {isLoading && (
@@ -35,7 +59,7 @@ export const SplineVehicleScene: React.FC<SplineVehicleSceneProps> = ({
       )}
 
       {/* Spline Canvas Container */}
-      <div className="w-full h-full relative spline-canvas-container pointer-events-auto">
+      <div className="w-full h-full relative spline-canvas-container pointer-events-auto" style={{ touchAction: 'none' }}>
         <Spline
           scene="https://prod.spline.design/AQlN8q71T0ZzTqkz/scene.splinecode"
           onLoad={handleLoad}
@@ -49,7 +73,7 @@ export const SplineVehicleScene: React.FC<SplineVehicleSceneProps> = ({
         <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#090a0f]/80 backdrop-blur-md border border-white/10 text-white text-[11px] font-semibold pointer-events-auto">
             <Move className="w-3.5 h-3.5 text-[#e63946]" />
-            <span>Interactive 3D Model • Click & Drag to Rotate</span>
+            <span>Interactive 3D Model • Touch & Drag to Rotate</span>
           </div>
 
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#090a0f]/80 backdrop-blur-md border border-white/10 text-zinc-300 text-[11px] font-semibold pointer-events-auto">
