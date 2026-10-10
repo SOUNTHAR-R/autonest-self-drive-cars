@@ -116,7 +116,8 @@ export const HomePage: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1, delay: 0.2 }}
-              className="lg:col-span-6 h-[320px] sm:h-[420px] lg:h-[520px] xl:h-[580px] w-full flex items-center justify-center relative bg-transparent"
+              className="lg:col-span-6 h-[320px] sm:h-[420px] lg:h-[520px] xl:h-[580px] w-full flex items-center justify-center relative bg-transparent z-30 pointer-events-auto"
+              style={{ touchAction: 'none' }}
             >
               <SplineCarHero />
             </motion.div>
