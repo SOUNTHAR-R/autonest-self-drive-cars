@@ -10,7 +10,140 @@ const getHeaders = () => {
   };
 };
 
+const getCustomerHeaders = () => {
+  const token = localStorage.getItem('autonest_customer_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+};
+
 export const api = {
+  // Customer Auth & Account
+  customerRegister: async (payload: { fullName: string; email: string; password?: string; phone?: string }) => {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Registration failed');
+    }
+    if (data.token) {
+      localStorage.setItem('autonest_customer_token', data.token);
+    }
+    return data;
+  },
+
+  customerLogin: async (payload: { email: string; password?: string }) => {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Login failed');
+    }
+    if (data.token) {
+      localStorage.setItem('autonest_customer_token', data.token);
+    }
+    return data;
+  },
+
+  customerGoogleAuth: async (payload: { credential?: string; email?: string; fullName?: string; googleId?: string; avatarUrl?: string }) => {
+    const res = await fetch(`${API_BASE}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Google sign-in failed');
+    }
+    if (data.token) {
+      localStorage.setItem('autonest_customer_token', data.token);
+    }
+    return data;
+  },
+
+  getCustomerMe: async () => {
+    const token = localStorage.getItem('autonest_customer_token');
+    if (!token) return { success: false };
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      headers: getCustomerHeaders()
+    });
+    return res.json();
+  },
+
+  forgotPassword: async (email: string) => {
+    const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Request failed');
+    }
+    return data;
+  },
+
+  resetPassword: async (token: string, newPassword: string) => {
+    const res = await fetch(`${API_BASE}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, newPassword })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Password reset failed');
+    }
+    return data;
+  },
+
+  updateCustomerProfile: async (payload: { fullName?: string; phone?: string; address?: string }) => {
+    const res = await fetch(`${API_BASE}/account/profile`, {
+      method: 'PATCH',
+      headers: getCustomerHeaders(),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to update profile');
+    }
+    return data;
+  },
+
+  changeCustomerPassword: async (payload: { currentPassword: string; newPassword: string }) => {
+    const res = await fetch(`${API_BASE}/account/change-password`, {
+      method: 'POST',
+      headers: getCustomerHeaders(),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to change password');
+    }
+    return data;
+  },
+
+  getCustomerBookings: async () => {
+    const res = await fetch(`${API_BASE}/account/bookings`, {
+      headers: getCustomerHeaders()
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to fetch customer bookings');
+    }
+    return data.bookings;
+  },
+
+  customerLogout: () => {
+    localStorage.removeItem('autonest_customer_token');
+  },
+
   // Admin Auth
   adminLogin: async (email: string, password: string) => {
     const res = await fetch(`${API_BASE}/admin/auth/login`, {

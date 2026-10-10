@@ -13,6 +13,9 @@ import adminCustomersRouter from './routes/adminCustomers.js';
 import adminUploadsRouter from './routes/adminUploads.js';
 import publicApiRouter from './routes/publicApi.js';
 
+import customerAuthRouter from './routes/customerAuth.js';
+import { customerAccountRouter } from './routes/customerAccount.js';
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -31,6 +34,8 @@ const uploadsPath = path.join(__dirname, '../public/uploads');
 app.use('/uploads', express.static(uploadsPath));
 
 // API Routes
+app.use('/api/auth', customerAuthRouter);
+app.use('/api/account', customerAccountRouter);
 app.use('/api/admin/auth', adminAuthRouter);
 app.use('/api/admin/cars', adminCarsRouter);
 app.use('/api/admin/bookings', adminBookingsRouter);

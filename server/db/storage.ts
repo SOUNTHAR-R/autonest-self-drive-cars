@@ -9,6 +9,8 @@ const DB_FILE = path.join(__dirname, '../data/db.json');
 
 export interface DBData {
   admins: any[];
+  users: any[];
+  resetTokens: any[];
   cars: any[];
   bookings: any[];
 }
@@ -16,15 +18,22 @@ export interface DBData {
 export const readDB = (): DBData => {
   try {
     if (!fs.existsSync(DB_FILE)) {
-      const defaultData: DBData = { admins: [], cars: [], bookings: [] };
+      const defaultData: DBData = { admins: [], users: [], resetTokens: [], cars: [], bookings: [] };
       fs.writeFileSync(DB_FILE, JSON.stringify(defaultData, null, 2), 'utf-8');
       return defaultData;
     }
     const raw = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return {
+      admins: parsed.admins || [],
+      users: parsed.users || [],
+      resetTokens: parsed.resetTokens || [],
+      cars: parsed.cars || [],
+      bookings: parsed.bookings || []
+    };
   } catch (err) {
     console.error('Error reading JSON DB:', err);
-    return { admins: [], cars: [], bookings: [] };
+    return { admins: [], users: [], resetTokens: [], cars: [], bookings: [] };
   }
 };
 

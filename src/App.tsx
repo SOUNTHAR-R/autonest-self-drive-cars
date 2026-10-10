@@ -29,6 +29,12 @@ import { AdminCustomers } from './pages/admin/AdminCustomers';
 import { AdminPricing } from './pages/admin/AdminPricing';
 import { AdminSettings } from './pages/admin/AdminSettings';
 
+// Auth Pages
+import { LoginPage } from './pages/auth/LoginPage';
+import { RegisterPage } from './pages/auth/RegisterPage';
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+
 // Scroll To Top component on route changes
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -78,6 +84,10 @@ const MainContent = () => {
           <Route path="/vehicle/:id" element={<VehicleDetailPage />} />
           <Route path="/booking" element={<BookingFlowPage />} />
           <Route path="/account" element={<UserAccountPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/locations" element={<LocationsPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />

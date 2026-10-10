@@ -4,7 +4,7 @@ import { Car, Menu, X, User as UserIcon, Shield, Bookmark, LogOut, ChevronRight,
 import { useApp } from '../../context/AppContext';
 
 export const Navbar: React.FC = () => {
-  const { user, favorites, setAuthModalOpen, switchUserRole, logoutUser, locationInfo } = useApp();
+  const { user, favorites, switchUserRole, logoutUser, locationInfo } = useApp();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -152,29 +152,6 @@ export const Navbar: React.FC = () => {
                       <p className="text-[11px] text-zinc-400 truncate">{user.email}</p>
                     </div>
 
-                    {/* Role Switcher Toggle */}
-                    <div className="px-2 py-1.5 my-1 bg-[#090a0f] rounded-xl border border-white/5 flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-zinc-400">Mode</span>
-                      <div className="flex items-center gap-1 bg-[#191c28] p-0.5 rounded-lg border border-white/10">
-                        <button
-                          onClick={() => switchUserRole('user')}
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                            user.role === 'user' ? 'bg-[#e63946] text-white' : 'text-zinc-400 hover:text-white'
-                          }`}
-                        >
-                          User
-                        </button>
-                        <button
-                          onClick={() => switchUserRole('admin')}
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all flex items-center gap-1 ${
-                            user.role === 'admin' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'
-                          }`}
-                        >
-                          <Shield className="w-2.5 h-2.5" /> Admin
-                        </button>
-                      </div>
-                    </div>
-
                     <Link
                       to="/account"
                       onClick={() => setUserDropdownOpen(false)}
@@ -206,12 +183,20 @@ export const Navbar: React.FC = () => {
                 )}
               </div>
             ) : (
-              <button
-                onClick={() => setAuthModalOpen(true)}
-                className="text-xs font-bold text-white hover:text-[#e63946] px-3 py-1.5 transition-colors"
-              >
-                Sign In
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/login"
+                  className="text-xs font-bold text-zinc-300 hover:text-white px-3 py-1.5 transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="text-xs font-bold text-[#e63946] border border-[#e63946]/30 hover:bg-[#e63946]/10 px-3 py-1.5 rounded-xl transition-colors"
+                >
+                  Register
+                </Link>
+              </div>
             )}
 
             {/* Book Now Primary Button */}

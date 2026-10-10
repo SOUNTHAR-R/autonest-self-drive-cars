@@ -86,13 +86,53 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [activeVehicleModal, setActiveVehicleModal] = useState<Vehicle | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Initial Sync from Backend API
+  // Initial Sync from Backend API & Session Restoration
   const refreshData = async () => {
     setIsLoading(true);
     try {
-      // Try to fetch public cars or admin cars
-      const token = localStorage.getItem('autonest_admin_token');
-      if (token) {
+      // Check customer session first
+      const custToken = localStorage.getItem('autonest_customer_token');
+      if (custToken) {
+        try {
+          const custRes = await api.getCustomerMe();
+          if (custRes.success && custRes.user) {
+            setUser({
+              id: custRes.user.id,
+              name: custRes.user.fullName || custRes.user.email.split('@')[0],
+              email: custRes.user.email,
+              phone: custRes.user.phone || '+91 89396 06556',
+              avatar: custRes.user.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80',
+              role: 'user',
+              memberSince: new Date(custRes.user.createdAt || Date.now()).getFullYear().toString()
+            });
+          }
+        } catch (e) {
+          console.warn('Customer session check failed');
+        }
+      }
+
+      // Check admin session
+      const adminToken = localStorage.getItem('autonest_admin_token');
+      if (adminToken && !custToken) {
+        try {
+          const adminRes = await api.getAdminMe();
+          if (adminRes.success && adminRes.admin) {
+            setUser({
+              id: adminRes.admin.id,
+              name: adminRes.admin.fullName || adminRes.admin.name || 'Autonest Admin',
+              email: adminRes.admin.email,
+              phone: '+91 89396 06556',
+              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+              role: 'admin',
+              memberSince: new Date().getFullYear().toString()
+            });
+          }
+        } catch (e) {
+          console.warn('Admin session check failed');
+        }
+      }
+
+      if (adminToken) {
         try {
           const adminCars = await api.getAdminCars();
           if (adminCars && adminCars.length > 0) setVehicles(adminCars);
@@ -312,6 +352,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const logoutUser = () => {
     setUser(null);
     localStorage.removeItem('autonest_admin_token');
+    localStorage.removeItem('autonest_customer_token');
     showToast('Signed out of account', 'info');
   };
 
