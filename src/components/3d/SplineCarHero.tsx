@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import Spline from '@splinetool/react-spline';
 import { Loader2, Move } from 'lucide-react';
 
@@ -9,79 +9,38 @@ interface SplineCarHeroProps {
 export const SplineCarHero: React.FC<SplineCarHeroProps> = ({ className = '' }) => {
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isTouchingRef = useRef<boolean>(false);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+  const handleSplineLoad = (splineApp: any) => {
+    setIsLoading(false);
 
-    const canvas = container.querySelector('canvas');
-    if (!canvas) return;
+    try {
+      // 1. Target WebGL canvas element and set strict touchAction = 'none'
+      const container = containerRef.current;
+      const canvas = container ? container.querySelector('canvas') : null;
 
-    // Apply strict touch-action and pointer styling directly to WebGL canvas
-    canvas.style.touchAction = 'none';
-    canvas.style.pointerEvents = 'auto';
-
-    const dispatchSyntheticPointerEvent = (type: string, touch: Touch, buttons: number) => {
-      try {
-        const pointerEvent = new PointerEvent(type, {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          clientX: touch.clientX,
-          clientY: touch.clientY,
-          screenX: touch.screenX,
-          screenY: touch.screenY,
-          pointerId: 1,
-          pointerType: 'touch',
-          isPrimary: true,
-          buttons
-        });
-        canvas.dispatchEvent(pointerEvent);
-      } catch (err) {
-        // Fallback for older browsers
+      if (canvas) {
+        canvas.style.touchAction = 'none';
+        canvas.style.pointerEvents = 'auto';
       }
-    };
 
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 1) {
-        isTouchingRef.current = true;
-        dispatchSyntheticPointerEvent('pointerdown', e.touches[0], 1);
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 1 && isTouchingRef.current) {
-        e.preventDefault(); // Prevent browser native window scroll
-        dispatchSyntheticPointerEvent('pointermove', e.touches[0], 1);
-      }
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (isTouchingRef.current) {
-        isTouchingRef.current = false;
-        const lastTouch = e.changedTouches[0] || e.touches[0];
-        if (lastTouch) {
-          dispatchSyntheticPointerEvent('pointerup', lastTouch, 0);
+      // 2. Configure Spline Orbit Controls: Enable Rotate & Disable Pan so touch drag rotates the 3D Porsche
+      if (splineApp) {
+        // Search controls or camera on splineApp instance
+        const controls = splineApp._controls || splineApp.controls || splineApp._cameraControls;
+        if (controls) {
+          controls.enablePan = false; // Disable pan/drag shift
+          controls.enableRotate = true; // Force orbit camera rotation
+          controls.enableZoom = true;
+          controls.rotateSpeed = 0.8;
+          controls.touches = {
+            ONE: 0, // 0 = TOUCH_ROTATE in Three.js OrbitControls!
+            TWO: 1  // 1 = TOUCH_DOLLY_PAN
+          };
         }
       }
-    };
-
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
-    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
-    canvas.addEventListener('touchcancel', handleTouchEnd, { passive: true });
-
-    return () => {
-      canvas.removeEventListener('touchstart', handleTouchStart);
-      canvas.removeEventListener('touchmove', handleTouchMove);
-      canvas.removeEventListener('touchend', handleTouchEnd);
-      canvas.removeEventListener('touchcancel', handleTouchEnd);
-    };
-  }, [isLoading]);
-
-  const handleSplineLoad = () => {
-    setIsLoading(false);
+    } catch (err) {
+      console.warn('Spline controls configuration:', err);
+    }
   };
 
   return (
@@ -110,7 +69,7 @@ export const SplineCarHero: React.FC<SplineCarHeroProps> = ({ className = '' }) 
         </div>
       )}
 
-      {/* Transparent Spline Canvas Wrapper */}
+      {/* Transparent Spline Canvas Wrapper with Bottom Crop to erase Built with Spline watermark */}
       <div
         className="relative w-full h-[calc(100%+75px)] -mb-[75px] flex items-center justify-center bg-transparent origin-center spline-canvas-container pointer-events-auto z-30"
         style={{ touchAction: 'none' }}
