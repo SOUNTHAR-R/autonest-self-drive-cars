@@ -10,7 +10,7 @@ export const SplineCarHero: React.FC<SplineCarHeroProps> = ({ className = '' }) 
   const [isLoading, setIsLoading] = useState(true);
 
   return (
-    <div className={`relative w-full h-full flex items-center justify-center bg-transparent overflow-hidden pointer-events-auto ${className}`}>
+    <div className={`relative w-full h-full flex items-center justify-center bg-transparent overflow-hidden pointer-events-auto spline-canvas-container ${className}`}>
       
       {/* Loader overlay */}
       {isLoading && (
@@ -23,11 +23,12 @@ export const SplineCarHero: React.FC<SplineCarHeroProps> = ({ className = '' }) 
       )}
 
       {/* Transparent Spline Canvas Wrapper with Bottom Crop to erase Built with Spline watermark */}
-      <div className="relative w-full h-[calc(100%+75px)] -mb-[75px] flex items-center justify-center bg-transparent scale-[1.05] origin-center">
+      <div className="relative w-full h-[calc(100%+75px)] -mb-[75px] flex items-center justify-center bg-transparent scale-[1.05] origin-center spline-canvas-container pointer-events-auto">
         <Spline
           scene="https://prod.spline.design/AQlN8q71T0ZzTqkz/scene.splinecode"
           onLoad={() => setIsLoading(false)}
-          className="w-full h-full bg-transparent"
+          className="w-full h-full bg-transparent pointer-events-auto"
+          style={{ touchAction: 'none', pointerEvents: 'auto' }}
         />
       </div>
 

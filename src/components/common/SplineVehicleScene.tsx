@@ -35,11 +35,12 @@ export const SplineVehicleScene: React.FC<SplineVehicleSceneProps> = ({
       )}
 
       {/* Spline Canvas Container */}
-      <div className="w-full h-full relative">
+      <div className="w-full h-full relative spline-canvas-container pointer-events-auto">
         <Spline
           scene="https://prod.spline.design/AQlN8q71T0ZzTqkz/scene.splinecode"
           onLoad={handleLoad}
-          className="w-full h-full"
+          className="w-full h-full pointer-events-auto"
+          style={{ touchAction: 'none', pointerEvents: 'auto' }}
         />
       </div>
 

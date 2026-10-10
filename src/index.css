@@ -82,3 +82,15 @@ a:has(span:contains("Spline")) {
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+/* Touch rotation enablement for 3D Spline Canvas on Mobile & Tablet */
+.spline-canvas-container,
+.spline-canvas-container canvas,
+.spline-canvas-container iframe,
+canvas[data-engine="three.js"] {
+  touch-action: none !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
