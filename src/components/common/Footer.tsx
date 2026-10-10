@@ -76,6 +76,9 @@ export const Footer: React.FC = () => {
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
           <p>© {new Date().getFullYear()} Autonest Self Drive Cars. All rights reserved.</p>
           <div className="flex items-center gap-6">
+            <Link to="/admin/login" className="hover:text-amber-400 font-semibold transition-colors flex items-center gap-1">
+              Admin Portal
+            </Link>
             <Link to="/terms" className="hover:text-zinc-400 transition-colors">Terms</Link>
             <Link to="/privacy" className="hover:text-zinc-400 transition-colors">Privacy</Link>
           </div>
