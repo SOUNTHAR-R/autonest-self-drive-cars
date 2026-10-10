@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { Vehicle, LocationHub, Booking, UserProfile, FilterState } from '../types';
-import { MOCK_VEHICLES, AUTONEST_LOCATION, MOCK_BOOKINGS, INITIAL_USER } from '../data/mockData';
+import { MOCK_VEHICLES, AUTONEST_LOCATION, MOCK_BOOKINGS } from '../data/mockData';
 import { api } from '../services/api';
 
 interface BookingDraft {
@@ -77,7 +77,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return saved ? JSON.parse(saved) : MOCK_BOOKINGS;
   });
 
-  const [user, setUser] = useState<UserProfile | null>(INITIAL_USER);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [favorites, setFavorites] = useState<string[]>(['car-01', 'car-03']);
   const [bookingDraft, setBookingDraft] = useState<BookingDraft>(defaultDraft);
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
@@ -89,14 +89,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Initial Sync from Backend API & Session Restoration
   const refreshData = async () => {
     setIsLoading(true);
+    let authenticatedUser: UserProfile | null = null;
+
     try {
       // Check customer session first
       const custToken = localStorage.getItem('autonest_customer_token');
       if (custToken) {
         try {
           const custRes = await api.getCustomerMe();
-          if (custRes.success && custRes.user) {
-            setUser({
+          if (custRes && custRes.success && custRes.user) {
+            authenticatedUser = {
               id: custRes.user.id,
               name: custRes.user.fullName || custRes.user.email.split('@')[0],
               email: custRes.user.email,
@@ -104,20 +106,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               avatar: custRes.user.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80',
               role: 'user',
               memberSince: new Date(custRes.user.createdAt || Date.now()).getFullYear().toString()
-            });
+            };
+          } else {
+            localStorage.removeItem('autonest_customer_token');
           }
         } catch (e) {
-          console.warn('Customer session check failed');
+          localStorage.removeItem('autonest_customer_token');
+          console.warn('Customer session invalid, cleared token.');
         }
       }
 
-      // Check admin session
+      // Check admin session if no customer session is active
       const adminToken = localStorage.getItem('autonest_admin_token');
-      if (adminToken && !custToken) {
+      if (adminToken && !authenticatedUser) {
         try {
           const adminRes = await api.getAdminMe();
-          if (adminRes.success && adminRes.admin) {
-            setUser({
+          if (adminRes && adminRes.success && adminRes.admin) {
+            authenticatedUser = {
               id: adminRes.admin.id,
               name: adminRes.admin.fullName || adminRes.admin.name || 'Autonest Admin',
               email: adminRes.admin.email,
@@ -125,12 +130,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
               role: 'admin',
               memberSince: new Date().getFullYear().toString()
-            });
+            };
+          } else {
+            localStorage.removeItem('autonest_admin_token');
           }
         } catch (e) {
-          console.warn('Admin session check failed');
+          localStorage.removeItem('autonest_admin_token');
+          console.warn('Admin session invalid, cleared token.');
         }
       }
+
+      setUser(authenticatedUser);
 
       if (adminToken) {
         try {

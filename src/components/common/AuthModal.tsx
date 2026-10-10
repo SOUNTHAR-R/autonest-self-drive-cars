@@ -1,19 +1,38 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail } from 'lucide-react';
+import { X, Lock, Mail, User, AlertCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../services/api';
 
 export const AuthModal: React.FC = () => {
-  const { isAuthModalOpen, setAuthModalOpen, loginUser } = useApp();
-  const [email, setEmail] = useState('rajesh.kanna@velocityluxe.com');
-  const [password, setPassword] = useState('••••••••');
+  const { isAuthModalOpen, setAuthModalOpen, refreshData, showToast } = useApp();
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isAuthModalOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      loginUser(email);
+    setError('');
+    setLoading(true);
+
+    try {
+      if (mode === 'login') {
+        await api.customerLogin({ email, password });
+        showToast('Logged in successfully', 'success');
+      } else {
+        await api.customerRegister({ fullName: fullName || email.split('@')[0], email, password });
+        showToast('Account registered successfully', 'success');
+      }
+      await refreshData();
+      setAuthModalOpen(false);
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,15 +57,41 @@ export const AuthModal: React.FC = () => {
             <Lock className="w-6 h-6" />
           </div>
           <h2 className="text-2xl font-black text-white font-heading">
-            {mode === 'login' ? 'Access Your VIP Account' : 'Create VIP Account'}
+            {mode === 'login' ? 'Sign In to Autonest' : 'Create Customer Account'}
           </h2>
           <p className="text-xs text-zinc-400 mt-1">
-            {mode === 'login' ? 'Unlock member pricing and instant reservations' : 'Join South India’s premier luxury car collective'}
+            {mode === 'login' ? 'Unlock member pricing and instant reservations' : 'Join Autonest Self Drive Cars in Chennai'}
           </p>
         </div>
 
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'register' && (
+            <div>
+              <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
+                Full Name
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Rajesh Kanna"
+                  className="w-full bg-[#090a0f] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#e63946]"
+                />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
               Email Address
@@ -58,7 +103,7 @@ export const AuthModal: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
+                placeholder="customer@example.com"
                 className="w-full bg-[#090a0f] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#e63946]"
               />
             </div>
@@ -75,6 +120,7 @@ export const AuthModal: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
                 className="w-full bg-[#090a0f] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#e63946]"
               />
             </div>
@@ -82,23 +128,20 @@ export const AuthModal: React.FC = () => {
 
           <button
             type="submit"
+            disabled={loading}
             className="w-full py-3 rounded-xl bg-[#e63946] hover:bg-[#d62839] text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-[#e63946]/30 transition-all duration-300 mt-2"
           >
-            {mode === 'login' ? 'Sign In to Account' : 'Register Account'}
+            {loading ? 'Processing...' : mode === 'login' ? 'Sign In to Account' : 'Register Account'}
           </button>
         </form>
-
-        {/* Demo Quick Sign-in Note */}
-        <div className="mt-5 p-3 rounded-xl bg-[#191c28] border border-white/5 text-center">
-          <p className="text-[11px] text-zinc-400">
-            <span className="text-amber-400 font-bold">Demo Quick Access:</span> You can sign in with any email to instantly explore the user experience.
-          </p>
-        </div>
 
         {/* Toggle Mode */}
         <div className="mt-5 text-center">
           <button
-            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+            onClick={() => {
+              setMode(mode === 'login' ? 'register' : 'login');
+              setError('');
+            }}
             className="text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
           >
             {mode === 'login' ? "Don't have an account? Create one" : 'Already have an account? Sign in'}
