@@ -58,3 +58,22 @@ export const initMongoDB = async () => {
     console.log('MongoDB connection skipped/unavailable, using local persistent DB store.');
   }
 };
+
+export const storage = {
+  getUserById: (id: string) => {
+    const db = readDB();
+    return db.users.find((u) => u.id === id);
+  },
+  updateUser: (id: string, updates: any) => {
+    const db = readDB();
+    const idx = db.users.findIndex((u) => u.id === id);
+    if (idx === -1) return null;
+    db.users[idx] = { ...db.users[idx], ...updates, updatedAt: new Date().toISOString() };
+    writeDB(db);
+    return db.users[idx];
+  },
+  getAllBookings: () => {
+    const db = readDB();
+    return db.bookings;
+  }
+};
