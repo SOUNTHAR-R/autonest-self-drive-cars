@@ -16,9 +16,14 @@ export const SplineVehicleScene: React.FC<SplineVehicleSceneProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleLoad = () => {
+  const handleLoad = (splineApp: any) => {
     setIsLoading(false);
     try {
+      if (splineApp) {
+        if (splineApp._controls) splineApp._controls.touches = { ONE: 0, TWO: 1 };
+        if (splineApp.controls) splineApp.controls.touches = { ONE: 0, TWO: 1 };
+      }
+
       const container = containerRef.current;
       const canvas = container ? container.querySelector('canvas') : null;
 
@@ -26,13 +31,76 @@ export const SplineVehicleScene: React.FC<SplineVehicleSceneProps> = ({
         canvas.style.touchAction = 'none';
         canvas.style.pointerEvents = 'auto';
 
-        const handleTouchMove = (e: TouchEvent) => {
+        let isTouchDragging = false;
+
+        const handleTouchStart = (e: TouchEvent) => {
           if (e.touches.length === 1) {
-            e.preventDefault();
+            isTouchDragging = true;
+            const touch = e.touches[0];
+            try {
+              const pointerEvent = new PointerEvent('pointerdown', {
+                bubbles: true,
+                cancelable: true,
+                pointerId: 1,
+                pointerType: 'mouse',
+                isPrimary: true,
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                screenX: touch.screenX,
+                screenY: touch.screenY,
+                button: 0,
+                buttons: 1
+              });
+              canvas.dispatchEvent(pointerEvent);
+            } catch (err) {}
           }
         };
 
+        const handleTouchMove = (e: TouchEvent) => {
+          if (e.touches.length === 1) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            try {
+              const pointerEvent = new PointerEvent('pointermove', {
+                bubbles: true,
+                cancelable: true,
+                pointerId: 1,
+                pointerType: 'mouse',
+                isPrimary: true,
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                screenX: touch.screenX,
+                screenY: touch.screenY,
+                button: 0,
+                buttons: 1
+              });
+              canvas.dispatchEvent(pointerEvent);
+            } catch (err) {}
+          }
+        };
+
+        const handleTouchEnd = () => {
+          if (isTouchDragging) {
+            isTouchDragging = false;
+            try {
+              const pointerEvent = new PointerEvent('pointerup', {
+                bubbles: true,
+                cancelable: true,
+                pointerId: 1,
+                pointerType: 'mouse',
+                isPrimary: true,
+                button: 0,
+                buttons: 0
+              });
+              canvas.dispatchEvent(pointerEvent);
+            } catch (err) {}
+          }
+        };
+
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
         canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
+        canvas.addEventListener('touchcancel', handleTouchEnd, { passive: true });
       }
     } catch (err) {
       console.warn('Spline touch listener setup:', err);
@@ -73,7 +141,7 @@ export const SplineVehicleScene: React.FC<SplineVehicleSceneProps> = ({
         <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#090a0f]/80 backdrop-blur-md border border-white/10 text-white text-[11px] font-semibold pointer-events-auto">
             <Move className="w-3.5 h-3.5 text-[#e63946]" />
-            <span>Interactive 3D Model • Touch & Drag to Rotate</span>
+            <span>Interactive 3D Model • 1-Finger Touch to Rotate</span>
           </div>
 
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#090a0f]/80 backdrop-blur-md border border-white/10 text-zinc-300 text-[11px] font-semibold pointer-events-auto">
