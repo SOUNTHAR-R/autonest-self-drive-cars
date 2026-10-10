@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import Spline from '@splinetool/react-spline';
-import { Loader2, Move } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 interface SplineCarHeroProps {
   className?: string;
@@ -59,15 +59,7 @@ export const SplineCarHero: React.FC<SplineCarHeroProps> = ({ className = '' }) 
         </div>
       )}
 
-      {/* Mobile Interactive Hint Badge */}
-      {!isLoading && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none sm:hidden">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#090a0f]/80 backdrop-blur-md border border-white/10 text-zinc-300 text-[10px] font-bold uppercase tracking-wider">
-            <Move className="w-3 h-3 text-[#e63946]" />
-            <span>Drag 1 Finger to Rotate 3D Porsche</span>
-          </div>
-        </div>
-      )}
+
 
       {/* Transparent Spline Canvas Wrapper with Bottom Crop to erase Built with Spline watermark */}
       <div
